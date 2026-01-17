@@ -1,0 +1,36 @@
+# Dependencies and build artifacts
+node_modules/
+dist/
+build/
+.cache/
+
+# Deno
+deno.lock
+
+# Pokemon Showdown Rust (subproject - has its own repo)
+pokemon-showdown-rs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp

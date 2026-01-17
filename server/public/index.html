@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pokemon Battle</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: #fff;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 1.8rem;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* Battle field */
+    .battle-field {
+      background: linear-gradient(180deg, #87CEEB 0%, #98FB98 60%, #228B22 100%);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      min-height: 300px;
+      position: relative;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    /* Pokemon display */
+    .pokemon-slot {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 15px;
+      background: rgba(255,255,255,0.9);
+      border-radius: 12px;
+      color: #333;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .opponent-slot {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 300px;
+    }
+    .player-slot {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      width: 300px;
+    }
+    .pokemon-sprite {
+      width: 96px;
+      height: 96px;
+      image-rendering: pixelated;
+      background: #f0f0f0;
+      border-radius: 8px;
+    }
+    .pokemon-info {
+      flex: 1;
+    }
+    .pokemon-name {
+      font-weight: bold;
+      font-size: 1.1rem;
+      margin-bottom: 5px;
+    }
+    .hp-bar-container {
+      background: #ddd;
+      border-radius: 10px;
+      height: 12px;
+      overflow: hidden;
+      margin: 5px 0;
+    }
+    .hp-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #4CAF50, #8BC34A);
+      transition: width 0.5s ease;
+    }
+    .hp-bar.low { background: linear-gradient(90deg, #f44336, #ff5722); }
+    .hp-bar.medium { background: linear-gradient(90deg, #ff9800, #ffc107); }
+    .hp-text {
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    /* Turn indicator */
+    .turn-indicator {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.7);
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 1rem;
+    }
+
+    /* Controls */
+    .controls {
+      background: rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .controls h3 {
+      margin-bottom: 15px;
+      font-size: 1.1rem;
+    }
+    .move-buttons {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .move-btn {
+      padding: 15px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: capitalize;
+    }
+    .move-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .move-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .move-btn.normal { background: #A8A878; color: #fff; }
+    .move-btn.fire { background: #F08030; color: #fff; }
+    .move-btn.water { background: #6890F0; color: #fff; }
+    .move-btn.grass { background: #78C850; color: #fff; }
+    .move-btn.electric { background: #F8D030; color: #333; }
+    .move-btn.ice { background: #98D8D8; color: #333; }
+    .move-btn.fighting { background: #C03028; color: #fff; }
+    .move-btn.poison { background: #A040A0; color: #fff; }
+    .move-btn.ground { background: #E0C068; color: #333; }
+    .move-btn.flying { background: #A890F0; color: #fff; }
+    .move-btn.psychic { background: #F85888; color: #fff; }
+    .move-btn.bug { background: #A8B820; color: #fff; }
+    .move-btn.rock { background: #B8A038; color: #fff; }
+    .move-btn.ghost { background: #705898; color: #fff; }
+    .move-btn.dragon { background: #7038F8; color: #fff; }
+    .move-btn.dark { background: #705848; color: #fff; }
+    .move-btn.steel { background: #B8B8D0; color: #333; }
+    .move-btn.fairy { background: #EE99AC; color: #333; }
+    .move-btn.default { background: #68A090; color: #fff; }
+
+    /* Battle log */
+    .battle-log {
+      background: rgba(0,0,0,0.3);
+      border-radius: 12px;
+      padding: 15px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    .log-entry {
+      padding: 2px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .log-entry.damage { color: #ff6b6b; }
+    .log-entry.heal { color: #51cf66; }
+    .log-entry.move { color: #74c0fc; }
+    .log-entry.status { color: #ffd43b; }
+
+    /* Start screen */
+    .start-screen {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .start-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      border: none;
+      padding: 20px 50px;
+      font-size: 1.3rem;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    .start-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+    }
+
+    /* Winner screen */
+    .winner-screen {
+      text-align: center;
+      padding: 40px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 16px;
+    }
+    .winner-screen h2 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+    }
+
+    /* Team display */
+    .team-bar {
+      display: flex;
+      gap: 5px;
+      margin-top: 10px;
+    }
+    .team-pokemon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #4CAF50;
+    }
+    .team-pokemon.fainted {
+      background: #666;
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 40px;
+    }
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Pokemon Battle</h1>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="start-screen">
+      <p style="margin-bottom: 30px; opacity: 0.8;">Random Battle vs AI</p>
+      <button class="start-btn" onclick="startBattle()">Start Battle</button>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading hidden">
+      <div class="spinner"></div>
+      <p>Generating teams...</p>
+    </div>
+
+    <!-- Battle Screen -->
+    <div id="battle-screen" class="hidden">
+      <!-- Battle Field -->
+      <div class="battle-field">
+        <div class="pokemon-slot opponent-slot">
+          <img id="opponent-sprite" class="pokemon-sprite" src="" alt="">
+          <div class="pokemon-info">
+            <div id="opponent-name" class="pokemon-name">???</div>
+            <div class="hp-bar-container">
+              <div id="opponent-hp-bar" class="hp-bar" style="width: 100%"></div>
+            </div>
+            <div id="opponent-hp-text" class="hp-text">???/???</div>
+            <div id="opponent-team" class="team-bar"></div>
+          </div>
+        </div>
+
+        <div class="turn-indicator">Turn <span id="turn-number">1</span></div>
+
+        <div class="pokemon-slot player-slot">
+          <img id="player-sprite" class="pokemon-sprite" src="" alt="">
+          <div class="pokemon-info">
+            <div id="player-name" class="pokemon-name">???</div>
+            <div class="hp-bar-container">
+              <div id="player-hp-bar" class="hp-bar" style="width: 100%"></div>
+            </div>
+            <div id="player-hp-text" class="hp-text">???/???</div>
+            <div id="player-team" class="team-bar"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls">
+        <h3>Choose your move:</h3>
+        <div id="move-buttons" class="move-buttons">
+          <!-- Moves will be added here -->
+        </div>
+      </div>
+
+      <!-- Battle Log -->
+      <div class="battle-log" id="battle-log">
+        <div class="log-entry">Battle started!</div>
+      </div>
+    </div>
+
+    <!-- Winner Screen -->
+    <div id="winner-screen" class="winner-screen hidden">
+      <h2 id="winner-text">You Win!</h2>
+      <button class="start-btn" onclick="startBattle()">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/api';
+    let currentBattleId = null;
+    let currentRequest = null;
+
+    // Pokemon sprite URL helper
+    function getSpriteUrl(species, isBack = false) {
+      // Clean species name for sprite URL
+      const cleanName = species.toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+        .replace('mega', '')
+        .replace('gmax', '')
+        .replace('galar', '')
+        .replace('alola', '');
+      const facing = isBack ? 'back/' : '';
+      return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${facing}${getPokedexNumber(cleanName) || 0}.png`;
+    }
+
+    // Simple pokedex number lookup (partial)
+    function getPokedexNumber(name) {
+      const dex = {
+        pikachu: 25, charizard: 6, bulbasaur: 1, squirtle: 7, eevee: 133,
+        gengar: 94, dragonite: 149, mewtwo: 150, mew: 151, tyranitar: 248,
+        gardevoir: 282, lucario: 448, greninja: 658, mimikyu: 778,
+        // Add more as needed, or return random for unknown
+      };
+      return dex[name] || Math.floor(Math.random() * 898) + 1;
+    }
+
+    function showScreen(screenId) {
+      ['start-screen', 'loading-screen', 'battle-screen', 'winner-screen'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+      document.getElementById(screenId).classList.remove('hidden');
+    }
+
+    async function startBattle() {
+      showScreen('loading-screen');
+
+      try {
+        const seed = Math.floor(Math.random() * 10000);
+        const response = await fetch(`${API_BASE}/battles`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ seed })
+        });
+
+        const data = await response.json();
+        currentBattleId = data.battleId;
+        currentRequest = data.request;
+
+        // Clear log
+        document.getElementById('battle-log').innerHTML = '';
+
+        // Parse and display initial log
+        parseLog(data.log);
+
+        // Update UI
+        updateBattleUI(data);
+        showScreen('battle-screen');
+      } catch (error) {
+        console.error('Failed to start battle:', error);
+        alert('Failed to start battle. Is the server running?');
+        showScreen('start-screen');
+      }
+    }
+
+    async function makeChoice(choice) {
+      if (!currentBattleId) return;
+
+      // Disable buttons while processing
+      const buttons = document.querySelectorAll('.move-btn');
+      buttons.forEach(btn => btn.disabled = true);
+
+      try {
+        const response = await fetch(`${API_BASE}/battles/${currentBattleId}/choice`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ choice })
+        });
+
+        const data = await response.json();
+        currentRequest = data.request;
+
+        // Parse and display new log entries
+        parseLog(data.log);
+
+        // Update UI
+        updateBattleUI(data);
+
+        // Check for battle end
+        if (data.ended) {
+          setTimeout(() => {
+            document.getElementById('winner-text').textContent =
+              data.winner === 'Player' ? 'You Win!' : 'You Lose!';
+            showScreen('winner-screen');
+          }, 1000);
+        }
+      } catch (error) {
+        console.error('Failed to make choice:', error);
+        buttons.forEach(btn => btn.disabled = false);
+      }
+    }
+
+    function updateBattleUI(data) {
+      // Update turn
+      document.getElementById('turn-number').textContent = data.turn;
+
+      // Get active Pokemon from request
+      if (currentRequest && currentRequest.side) {
+        const playerTeam = currentRequest.side.pokemon;
+        const activePokemon = playerTeam.find(p => p.active);
+
+        if (activePokemon) {
+          // Parse condition "240/240 100" -> hp/maxhp
+          const condition = activePokemon.condition.split(' ')[0];
+          const [hp, maxHp] = condition.split('/').map(Number);
+
+          document.getElementById('player-name').textContent = activePokemon.ident.split(': ')[1];
+          document.getElementById('player-hp-text').textContent = `${hp}/${maxHp}`;
+          updateHpBar('player-hp-bar', hp, maxHp);
+
+          // Try to get sprite
+          const species = activePokemon.details.split(',')[0].toLowerCase();
+          document.getElementById('player-sprite').src = getSpriteUrl(species, true);
+        }
+
+        // Update player team indicators
+        const playerTeamEl = document.getElementById('player-team');
+        playerTeamEl.innerHTML = playerTeam.map(p => {
+          const fainted = p.condition === '0 fnt' || p.condition.startsWith('0/');
+          return `<div class="team-pokemon ${fainted ? 'fainted' : ''}"></div>`;
+        }).join('');
+      }
+
+      // Update moves
+      updateMoveButtons();
+    }
+
+    function updateHpBar(elementId, hp, maxHp) {
+      const bar = document.getElementById(elementId);
+      const percent = Math.max(0, (hp / maxHp) * 100);
+      bar.style.width = `${percent}%`;
+      bar.className = 'hp-bar';
+      if (percent <= 20) bar.classList.add('low');
+      else if (percent <= 50) bar.classList.add('medium');
+    }
+
+    function updateMoveButtons() {
+      const container = document.getElementById('move-buttons');
+      container.innerHTML = '';
+
+      if (!currentRequest || !currentRequest.active || !currentRequest.active[0]) {
+        container.innerHTML = '<p>Waiting...</p>';
+        return;
+      }
+
+      const moves = currentRequest.active[0].moves;
+      moves.forEach((move, index) => {
+        const btn = document.createElement('button');
+        btn.className = `move-btn default`;
+        btn.textContent = `${move.move} (${move.pp}/${move.maxpp})`;
+        btn.disabled = move.disabled || move.pp === 0;
+        btn.onclick = () => makeChoice(`move ${index + 1}`);
+        container.appendChild(btn);
+      });
+
+      // Add switch button if there are other Pokemon
+      if (currentRequest.side) {
+        const canSwitch = currentRequest.side.pokemon.filter(p =>
+          !p.active && !p.condition.startsWith('0')
+        );
+        if (canSwitch.length > 0 && !currentRequest.noCancel) {
+          const switchBtn = document.createElement('button');
+          switchBtn.className = 'move-btn default';
+          switchBtn.textContent = 'Switch Pokemon';
+          switchBtn.onclick = showSwitchOptions;
+          container.appendChild(switchBtn);
+        }
+      }
+    }
+
+    function showSwitchOptions() {
+      const container = document.getElementById('move-buttons');
+      container.innerHTML = '';
+
+      const pokemon = currentRequest.side.pokemon;
+      pokemon.forEach((p, index) => {
+        if (p.active || p.condition.startsWith('0')) return;
+
+        const btn = document.createElement('button');
+        btn.className = 'move-btn default';
+        btn.textContent = `${p.ident.split(': ')[1]}`;
+        btn.onclick = () => makeChoice(`switch ${index + 1}`);
+        container.appendChild(btn);
+      });
+
+      // Back button
+      const backBtn = document.createElement('button');
+      backBtn.className = 'move-btn default';
+      backBtn.textContent = 'Back';
+      backBtn.onclick = updateMoveButtons;
+      container.appendChild(backBtn);
+    }
+
+    function parseLog(logEntries) {
+      const logContainer = document.getElementById('battle-log');
+
+      logEntries.forEach(entry => {
+        if (!entry || entry === '|' || entry.startsWith('|t:')) return;
+
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+
+        // Parse protocol message
+        const parts = entry.split('|');
+        const cmd = parts[1];
+
+        switch (cmd) {
+          case 'move':
+            div.className += ' move';
+            div.textContent = `${parts[2]} used ${parts[3]}!`;
+            break;
+          case '-damage':
+            div.className += ' damage';
+            const target = parts[2];
+            const hp = parts[3];
+            div.textContent = `${target} took damage! (${hp})`;
+
+            // Update opponent HP if it's their Pokemon
+            if (target.startsWith('p2')) {
+              const [currentHp, maxHp] = hp.split('/').map(s => parseInt(s));
+              document.getElementById('opponent-hp-text').textContent = `${currentHp}/${maxHp}`;
+              updateHpBar('opponent-hp-bar', currentHp, maxHp);
+            }
+            break;
+          case '-heal':
+            div.className += ' heal';
+            div.textContent = `${parts[2]} healed! (${parts[3]})`;
+            break;
+          case 'switch':
+            const pokemon = parts[2];
+            const details = parts[3];
+            const switchHp = parts[4];
+            div.textContent = `${pokemon} switched in!`;
+
+            // Update sprites and names
+            if (pokemon.startsWith('p2')) {
+              document.getElementById('opponent-name').textContent = pokemon.split(': ')[1];
+              const species = details.split(',')[0].toLowerCase();
+              document.getElementById('opponent-sprite').src = getSpriteUrl(species);
+              const [hp, maxHp] = switchHp.split('/').map(s => parseInt(s));
+              document.getElementById('opponent-hp-text').textContent = `${hp}/${maxHp}`;
+              updateHpBar('opponent-hp-bar', hp, maxHp);
+            }
+            break;
+          case 'faint':
+            div.className += ' damage';
+            div.textContent = `${parts[2]} fainted!`;
+            break;
+          case 'turn':
+            div.textContent = `--- Turn ${parts[2]} ---`;
+            break;
+          case '-supereffective':
+            div.textContent = "It's super effective!";
+            break;
+          case '-resisted':
+            div.textContent = "It's not very effective...";
+            break;
+          case '-crit':
+            div.textContent = "A critical hit!";
+            break;
+          case '-miss':
+            div.textContent = `${parts[2]}'s attack missed!`;
+            break;
+          case '-boost':
+          case '-unboost':
+            div.className += ' status';
+            const stat = parts[3];
+            const amount = parts[4];
+            const direction = cmd === '-boost' ? 'rose' : 'fell';
+            div.textContent = `${parts[2]}'s ${stat} ${direction}!`;
+            break;
+          case 'win':
+            div.textContent = `${parts[2]} wins!`;
+            break;
+          default:
+            if (entry.length > 3) {
+              div.textContent = entry;
+            } else {
+              return; // Skip empty entries
+            }
+        }
+
+        logContainer.appendChild(div);
+        logContainer.scrollTop = logContainer.scrollHeight;
+      });
+    }
+  </script>
+</body>
+</html>
